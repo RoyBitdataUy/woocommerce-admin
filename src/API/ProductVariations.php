@@ -23,6 +23,13 @@ class ProductVariations extends \WC_REST_Product_Variations_Controller {
 	protected $namespace = 'wc-analytics';
 
 	/**
+	 * Route base.
+	 *
+	 * @var string
+	 */
+	protected $rest_base = 'variations';
+
+	/**
 	 * Register the routes for products.
 	 */
 	public function register_routes() {
@@ -31,13 +38,39 @@ class ProductVariations extends \WC_REST_Product_Variations_Controller {
 		// Add a route for listing variations without specifying the parent product ID.
 		register_rest_route(
 			$this->namespace,
-			'/variations',
+			'/' . $this->rest_base,
 			array(
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_items' ),
 					'permission_callback' => array( $this, 'get_items_permissions_check' ),
 					'args'                => $this->get_collection_params(),
+				),
+				'schema' => array( $this, 'get_public_item_schema' ),
+			)
+		);
+
+		register_rest_route(
+			$this->namespace,
+			'/' . $this->rest_base . '/(?P<id>[\d]+)',
+			array(
+				'args'   => array(
+					'id' => array(
+						'description' => __( 'Unique identifier for the resource.', 'woocommerce-admin' ),
+						'type'        => 'integer',
+					),
+				),
+				array(
+					'methods'             => \WP_REST_Server::READABLE,
+					'callback'            => array( $this, 'get_item' ),
+					'permission_callback' => array( $this, 'get_items_permissions_check' ),
+					'args'                => array(
+						'context' => $this->get_context_param(
+							array(
+								'default' => 'view',
+							)
+						),
+					),
 				),
 				'schema' => array( $this, 'get_public_item_schema' ),
 			)
@@ -149,6 +182,20 @@ class ProductVariations extends \WC_REST_Product_Variations_Controller {
 		remove_filter( 'posts_join', array( __CLASS__, 'add_wp_query_join' ), 10 );
 		remove_filter( 'posts_groupby', array( 'Automattic\WooCommerce\Admin\API\Products', 'add_wp_query_group_by' ), 10 );
 		return $response;
+	}
+
+	/**
+	 * Get a single product variation.
+	 *
+	 * @param WP_REST_Request $request Full details about the request.
+	 * @return WP_Error|WP_REST_Response
+	 */
+	public function get_item( $request ) {
+		$response = parent::get_item( $request );
+		$data     = $response->get_data();
+
+		// The search controls we intend this endpoint for expect an array.
+		return rest_ensure_response( array( $data ) );
 	}
 
 	/**

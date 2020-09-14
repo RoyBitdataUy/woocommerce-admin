@@ -102,7 +102,13 @@ export function getVariationName( { attributes, name } ) {
 }
 
 export const getVariationLabels = getRequestByIdString(
-	( query ) => NAMESPACE + `/products/${ query.products }/variations`,
+	( query ) => {
+		if ( query.products ) {
+			return NAMESPACE + `/products/${ query.products }/variations`;
+		}
+
+		return NAMESPACE + `/variations/${ query.variations }`;
+	},
 	( variation ) => {
 		return {
 			key: variation.id,
